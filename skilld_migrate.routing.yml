@@ -1,0 +1,15 @@
+skilld_migrate.import_csv:
+  path: 'admin/content/skilld_migrate/import_csv'
+  defaults:
+    _form: '\Drupal\skilld_migrate\Form\ImportCsvForm'
+    _title: 'Import CSV'
+  requirements:
+    _permission: 'skilld migrate import csv'
+
+skilld_migrate.files:
+  path: 'admin/content/skilld_migrate/files'
+  defaults:
+    _form: '\Drupal\skilld_migrate\Form\FilesForm'
+    _title: 'File assets'
+  requirements:
+    _permission: 'skilld migrate import csv'

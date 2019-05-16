@@ -1,0 +1,174 @@
+<?php
+
+/**
+ * @file
+ * Main file for Skilld Migrate module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\migrate_plus\Entity\MigrationGroup;
+use Drupal\file\Entity\File;
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function skilld_migrate_form_migration_group_edit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if (!$form['id']['#default_value']) {
+    return;
+  }
+
+  $migration_group = MigrationGroup::load($form['id']['#default_value']);
+  $shared_config = $migration_group->get('shared_configuration');
+
+  if (!$shared_config) {
+    return;
+  }
+
+  if (!in_array($shared_config['source']['plugin'], ['csv', 'csv_limit'])) {
+    return;
+  }
+
+  $form_state->set('shared_configuration', $shared_config);
+
+  $fid = NULL;
+  /* @var \Drupal\file\Entity\File[] $files */
+  $files = \Drupal::entityTypeManager()->getStorage('file')->loadByProperties(['uri' => $shared_config['source']['path']]);
+  if (!empty($files)) {
+    $fid = reset($files)->id();
+  }
+  $form_state->set('csv_file_id', $fid);
+  $form['csv_file'] = [
+    '#type' => 'managed_file',
+    '#title' => t('CSV file'),
+    '#description' => t('CSV file to import.'),
+    '#upload_validators' => [
+      'file_validate_extensions' => ['csv'],
+    ],
+    '#upload_location' => 'public://csv/',
+    '#default_value' => [$fid],
+    '#required' => TRUE,
+  ];
+
+  $form['header_row_count'] = [
+    '#type' => 'select',
+    '#title' => t('Header rows'),
+    '#options' => [0, 1, 2],
+    '#default_value' => $shared_config['source']['header_row_count'],
+    '#description' => t('Select how many header rows the file has.'),
+  ];
+
+  $form['delimiter'] = [
+    '#type' => 'select',
+    '#title' => t('Delimiter'),
+    '#options' => [
+      ',' => ',',
+      ';' => ';',
+      '|' => '|',
+      'TAB' => 'TAB',
+      '+' => '+',
+    ],
+    '#default_value' => $shared_config['source']['delimiter'],
+    '#description' => t('The character that delimits fields in the CSV file.'),
+  ];
+
+  array_unshift($form['actions']['submit']['#submit'], '_skilld_migrate_migration_group_edit_form_submit');
+  $form['actions']['submit']['#validate'][] = '_skilld_migrate_migration_group_edit_form_validate';
+}
+
+/**
+ * Form validation callback.
+ *
+ * @param array $form
+ *   An associative array containing the structure of the form.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   The current state of the form.
+ */
+function _skilld_migrate_migration_group_edit_form_validate(array &$form, FormStateInterface $form_state) {
+  $fid = reset($form_state->getValue('csv_file'));
+
+  /** @var \Drupal\file\Entity\File $file */
+  if ($file = File::load($fid)) {
+    $uri = $file->getFileUri();
+    if ($handle = fopen($uri, 'r')) {
+      // Validate CSV file.
+      if (!_skilld_migrate_validate_file_csv($handle, $form_state->getValue('delimiter'))) {
+        $form_state->setError($form['csv_file'], t('The uploaded CSV file failed validation. Please check CSV file and delimiter settings.'));
+      }
+
+      fclose($handle);
+      return;
+    }
+  }
+
+  // If we are here - then there was some error with file upload.
+  $form_state->setError($form['csv_file'], t('There was an error with file upload. Please try again.'));
+}
+
+/**
+ * Form submit callback.
+ *
+ * @param array $form
+ *   An associative array containing the structure of the form.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   The current state of the form.
+ */
+function _skilld_migrate_migration_group_edit_form_submit(array &$form, FormStateInterface $form_state) {
+  $shared_config = $form_state->get('shared_configuration');
+  $shared_config['source']['header_row_count'] = $form_state->getValue('header_row_count');
+  $shared_config['source']['delimiter'] = $form_state->getValue('delimiter');
+  $form_state->setValue('shared_configuration', $shared_config);
+
+  $fid = reset($form_state->getValue('csv_file'));
+  $csv_file_id = $form_state->get('csv_file_id');
+  if ($fid == $csv_file_id) {
+    return;
+  }
+
+  /** @var \Drupal\file\FileUsage\FileUsageInterface $file_usage */
+  $file_usage = Drupal::service('file.usage');
+  $migration_group_id = $form_state->getValue('id');
+
+  // Handle old file.
+  if ($file = File::load($csv_file_id)) {
+    $file_usage->delete($file, 'skilld_migrate', 'migration_group', $migration_group_id);
+  }
+
+  // Handle new file.
+  if ($file = File::load($fid)) {
+    $uri = $file->getFileUri();
+    $shared_config['source']['path'] = $uri;
+    $form_state->setValue('shared_configuration', $shared_config);
+    $file_usage->add($file, 'skilld_migrate', 'migration_group', $migration_group_id);
+  }
+
+  // Clear migration plugins cache so they load the updated shared configuration
+  // from migration group.
+  /** @var \Drupal\migrate\Plugin\MigratePluginManagerInterface $plugin_manager */
+  $plugin_manager = \Drupal::service('plugin.manager.migration');
+  $plugin_manager->clearCachedDefinitions();
+}
+
+/**
+ * Validate CSV file.
+ *
+ * @param resource $handle
+ *   File handle.
+ * @param string $delimiter
+ *   CSV delimiter symbol.
+ *
+ * @return bool
+ *   Validated or failed.
+ */
+function _skilld_migrate_validate_file_csv($handle, $delimiter) {
+  $line = fgetcsv($handle, 0, $delimiter);
+  $count = count($line);
+
+  // Check that every row/line has the same number of values.
+  while ($line = fgetcsv($handle, 0, $delimiter)) {
+    if ($count != count($line)) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
