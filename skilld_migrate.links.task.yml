@@ -1,0 +1,9 @@
+skilld_migrate.import_csv:
+  route_name: skilld_migrate.import_csv
+  base_route: skilld_migrate.import_csv
+  title: 'Import CSV'
+
+skilld_migrate.files:
+  route_name: skilld_migrate.files
+  base_route: skilld_migrate.import_csv
+  title: 'File assets'

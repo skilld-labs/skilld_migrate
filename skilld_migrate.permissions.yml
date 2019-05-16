@@ -1,0 +1,3 @@
+skilld migrate import csv:
+  title: 'Import CSV'
+  description: 'Import content using CSV file.'

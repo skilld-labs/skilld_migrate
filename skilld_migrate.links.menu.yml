@@ -1,0 +1,6 @@
+skilld_migrate.import_csv:
+  title: 'Import CSV'
+  route_name: skilld_migrate.import_csv
+  parent: system.admin_content
+  description: 'Import content using CSV file.'
+  weight: 10
