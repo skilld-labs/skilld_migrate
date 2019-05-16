@@ -1,5 +1,11 @@
 {
-  "require": {
-    "neitanod/forceutf8": "2.0.*"
-  }
+    "name": "skilld/skilld_migrate",
+    "description": "This module extends Drupal Migrate framework.",
+    "type": "drupal-module",
+    "keywords": ["Drupal", "Migrate"],
+    "license": "MIT",
+    "require": {
+        "php": "^7.1",
+        "neitanod/forceutf8": "2.0.*"
+    }
 }
