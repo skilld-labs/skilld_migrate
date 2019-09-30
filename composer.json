@@ -6,6 +6,9 @@
     "license": "MIT",
     "require": {
         "php": "^7.1",
+        "drupal/migrate_plus": "^5",
+        "drupal/migrate_tools": "^4",
+        "drupal/migrate_source_csv": "^3",
         "neitanod/forceutf8": "2.0.*"
     }
 }
