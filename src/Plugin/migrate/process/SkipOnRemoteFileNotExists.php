@@ -9,7 +9,7 @@ use Drupal\migrate\Row;
 use Drupal\migrate\MigrateSkipRowException;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -149,7 +149,7 @@ class SkipOnRemoteFileNotExists extends ProcessPluginBase implements ContainerFa
       $this->httpClient->head($value);
       return TRUE;
     }
-    catch (ClientException $e) {
+    catch (RequestException $e) {
       return FALSE;
     }
   }
