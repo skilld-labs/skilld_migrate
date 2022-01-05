@@ -5,9 +5,9 @@
     "keywords": ["Drupal", "Migrate"],
     "license": "MIT",
     "require": {
-        "php": "^7.1",
+        "php": "^7.1 || ^8",
         "drupal/migrate_plus": "^5",
-        "drupal/migrate_tools": "^4",
+        "drupal/migrate_tools": "^4 || ^5",
         "drupal/migrate_source_csv": "^3.1",
         "neitanod/forceutf8": "2.0.*"
     }
